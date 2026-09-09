@@ -34,6 +34,7 @@ interface NotebookEditorProps {
   onDuplicateCell: (index: number) => void;
   onConvertCellType: (index: number, type: 'code' | 'markdown') => void;
   onAddCell: (type: 'code' | 'markdown') => void;
+  onClearError?: (index: number) => void;
 }
 
 export const NotebookEditor: React.FC<NotebookEditorProps> = ({
@@ -55,7 +56,8 @@ export const NotebookEditor: React.FC<NotebookEditorProps> = ({
   onDeleteCell,
   onDuplicateCell,
   onConvertCellType,
-  onAddCell
+  onAddCell,
+  onClearError
 }) => {
   const t = translations[language];
 
@@ -120,6 +122,7 @@ export const NotebookEditor: React.FC<NotebookEditorProps> = ({
                 onDelete={() => onDeleteCell(idx)}
                 onDuplicate={() => onDuplicateCell(idx)}
                 onConvertToMarkdown={() => onConvertCellType(idx, 'markdown')}
+                onClearError={() => onClearError?.(idx)}
               />
             ) : (
               <MarkdownCell

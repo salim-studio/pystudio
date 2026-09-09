@@ -20,6 +20,7 @@ import { PackageManagerModal } from './components/PackageManagerModal';
 import { UploadDatasetModal } from './components/UploadDatasetModal';
 import { AITutorDrawer } from './components/AITutorDrawer';
 import { safeFetch } from './lib/api';
+import { executeInClientPython } from './lib/pyodideRunner';
 
 // Initial default notebook
 const INITIAL_NOTEBOOK: Notebook = {
@@ -192,19 +193,33 @@ export default function App() {
       if (res.ok && res.data) {
         output = res.data.data || res.data;
       } else {
-        output = {
-          execution_count: nextCount,
-          stdout: '',
-          stderr: '',
-          result: null,
-          plots: [],
-          error: {
-            type: 'Notice',
-            message: res.error || 'Server response could not be loaded.',
-            suggestion: 'If the server was restarting or timed out, simply re-run this cell.'
-          },
-          elapsed_seconds: 0
-        };
+        // Transparent client-side Python fallback (Pyodide WASM) if server is temporarily reconnecting
+        try {
+          const clientRes = await executeInClientPython(targetCell.source);
+          output = {
+            execution_count: nextCount,
+            stdout: clientRes.stdout,
+            stderr: clientRes.stderr,
+            result: clientRes.result,
+            plots: clientRes.plots,
+            error: clientRes.error,
+            elapsed_seconds: clientRes.elapsed_seconds
+          };
+        } catch {
+          output = {
+            execution_count: nextCount,
+            stdout: '',
+            stderr: '',
+            result: null,
+            plots: [],
+            error: {
+              type: 'Notice',
+              message: res.error || 'Server response could not be loaded.',
+              suggestion: 'If the server was restarting or timed out, simply re-run this cell.'
+            },
+            elapsed_seconds: 0
+          };
+        }
       }
 
       setLastExecutionTime(output.elapsed_seconds || 0.05);
@@ -663,6 +678,7 @@ export default function App() {
               onDuplicateCell={handleDuplicateCell}
               onConvertCellType={handleConvertCellType}
               onAddCell={handleAddCell}
+              onClearError={handleClearError}
             />
           )}
         </div>

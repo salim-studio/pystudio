@@ -29,6 +29,7 @@ interface CodeCellProps {
   onDelete: () => void;
   onDuplicate: () => void;
   onConvertToMarkdown: () => void;
+  onClearError?: () => void;
 }
 
 export const CodeCell: React.FC<CodeCellProps> = ({
@@ -46,7 +47,8 @@ export const CodeCell: React.FC<CodeCellProps> = ({
   onMoveDown,
   onDelete,
   onDuplicate,
-  onConvertToMarkdown
+  onConvertToMarkdown,
+  onClearError
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -229,17 +231,31 @@ export const CodeCell: React.FC<CodeCellProps> = ({
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRun();
-                  }}
-                  className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-sans text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Run Cell"
-                >
-                  <Play className="w-2.5 h-2.5 fill-current" />
-                  <span>Run</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {onClearError && cell.output.error.type === 'Notice' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClearError();
+                      }}
+                      className="px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-sans text-[11px] font-medium transition-colors cursor-pointer"
+                      title="Dismiss notice"
+                    >
+                      Dismiss
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRun();
+                    }}
+                    className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-sans text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Run Cell"
+                  >
+                    <Play className="w-2.5 h-2.5 fill-current" />
+                    <span>Run</span>
+                  </button>
+                </div>
               </div>
               <div className={`font-medium ${cell.output.error.type === 'Notice' ? 'text-amber-700 dark:text-amber-300' : 'text-red-600 dark:text-red-400'}`}>
                 {cell.output.error.message}
