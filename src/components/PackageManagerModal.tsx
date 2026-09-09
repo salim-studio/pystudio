@@ -42,12 +42,24 @@ const CURATED_MARKETPLACE: Array<{
   { name: 'nltk', category: 'NLP', desc: 'Natural Language Toolkit for text processing and linguistics.', pypi: 'nltk' }
 ];
 
+const INITIAL_PRELOADED_PACKAGES: PythonPackage[] = [
+  { name: 'numpy', version: '2.2.6' },
+  { name: 'pandas', version: '2.3.3' },
+  { name: 'matplotlib', version: '3.10.9' },
+  { name: 'seaborn', version: '0.13.2' },
+  { name: 'scikit-learn', version: '1.7.2' },
+  { name: 'scipy', version: '1.15.3' },
+  { name: 'statsmodels', version: '0.15.0' },
+  { name: 'sympy', version: '1.14.0' },
+  { name: 'plotly', version: '7.0.0' }
+];
+
 export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
   isOpen,
   onClose,
   language
 }) => {
-  const [installedPackages, setInstalledPackages] = useState<PythonPackage[]>([]);
+  const [installedPackages, setInstalledPackages] = useState<PythonPackage[]>(INITIAL_PRELOADED_PACKAGES);
   const [loading, setLoading] = useState(false);
   const [installingName, setInstallingName] = useState<string | null>(null);
   const [customPackageInput, setCustomPackageInput] = useState('');
@@ -62,7 +74,7 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
     setLoading(true);
     try {
       const res = await safeFetch<{ packages: PythonPackage[] }>('/api/packages/list', undefined, 15000);
-      if (res.ok && res.data?.packages) {
+      if (res.ok && res.data?.packages && res.data.packages.length > 0) {
         setInstalledPackages(res.data.packages);
       }
     } catch (e) {
@@ -79,6 +91,13 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
   }, [isOpen]);
 
   const handleInstall = async (pkgName: string) => {
+    const existing = installedPackages.find(p => p.name.toLowerCase() === pkgName.toLowerCase().trim());
+    if (existing) {
+      setInstallLog(`✓ ${pkgName} is already installed (v${existing.version}). Ready to use: 'import ${pkgName}'`);
+      setFailedPkg(null);
+      return;
+    }
+
     setInstallingName(pkgName);
     setFailedPkg(null);
     setInstallLog(`Installing ${pkgName} via pip... please wait.`);
