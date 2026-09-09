@@ -178,7 +178,8 @@ export default function App() {
         body: JSON.stringify({ code: targetCell.source })
       });
 
-      const output = await res.json();
+      const raw = await res.json();
+      const output = raw?.data || raw;
       setLastExecutionTime(output.elapsed_seconds || 0.05);
 
       // Save output to cell
@@ -188,7 +189,7 @@ export default function App() {
         updatedCells[cellIdx] = {
           ...updatedCells[cellIdx],
           output,
-          execution_count: nextCount
+          execution_count: output.execution_count || nextCount
         };
         return { ...nb, cells: updatedCells };
       }));

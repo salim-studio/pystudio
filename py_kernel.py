@@ -52,26 +52,38 @@ class PythonKernel:
         plots = []
 
         try:
-            # Parse code to AST
-            parsed_ast = ast.parse(code)
+            import subprocess
+            import importlib
+            importlib.invalidate_caches()
+
+            # Separate and execute shell commands (!cmd or %pip) and python statements
+            lines = code.split("\n")
+            py_lines = []
             
-            # Check if last node is an expression (Jupyter-like evaluation)
-            last_expr = None
-            if parsed_ast.body and isinstance(parsed_ast.body[-1], ast.Expr):
-                last_expr = parsed_ast.body.pop()
-            
-            # Compile and execute the body statements
-            if parsed_ast.body:
-                compiled_body = compile(parsed_ast, filename="<cell>", mode="exec")
-                exec(compiled_body, self.user_globals)
-            
-            # If there was a trailing expression, evaluate it
-            if last_expr is not None:
-                compiled_expr = compile(ast.Expression(body=last_expr.value), filename="<cell>", mode="eval")
-                eval_result = eval(compiled_expr, self.user_globals)
-                
-                # Format evaluation result
-                result_payload = self._format_result(eval_result)
+            for line in lines:
+                stripped = line.strip()
+                if stripped.startswith("!") or stripped.startswith("%pip "):
+                    # Flush any pending python code
+                    if py_lines:
+                        sub_code = "\n".join(py_lines)
+                        py_lines = []
+                        result_payload = self._exec_ast_block(sub_code)
+
+                    # Execute shell command
+                    cmd = stripped[1:] if stripped.startswith("!") else ("python3 -m " + stripped[1:])
+                    proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                    if proc.stdout:
+                        sys.stdout.write(proc.stdout)
+                    if proc.stderr:
+                        sys.stderr.write(proc.stderr)
+                    importlib.invalidate_caches()
+                else:
+                    py_lines.append(line)
+
+            if py_lines:
+                remaining_code = "\n".join(py_lines)
+                if remaining_code.strip():
+                    result_payload = self._exec_ast_block(remaining_code)
 
             # Check for matplotlib plots
             plots = self._extract_matplotlib_plots()
@@ -114,6 +126,22 @@ class PythonKernel:
             "error": error_info,
             "elapsed_seconds": round(elapsed, 4)
         }
+
+    def _exec_ast_block(self, sub_code: str):
+        parsed_ast = ast.parse(sub_code)
+        last_expr = None
+        if parsed_ast.body and isinstance(parsed_ast.body[-1], ast.Expr):
+            last_expr = parsed_ast.body.pop()
+        
+        if parsed_ast.body:
+            compiled_body = compile(parsed_ast, filename="<cell>", mode="exec")
+            exec(compiled_body, self.user_globals)
+        
+        if last_expr is not None:
+            compiled_expr = compile(ast.Expression(body=last_expr.value), filename="<cell>", mode="eval")
+            eval_result = eval(compiled_expr, self.user_globals)
+            return self._format_result(eval_result)
+        return None
 
     def _format_result(self, val):
         if val is None:
@@ -296,7 +324,10 @@ def main():
     sys.stdout.write(json.dumps({"status": "ready"}) + "\n")
     sys.stdout.flush()
 
-    for line in sys.stdin:
+    while True:
+        line = sys.stdin.readline()
+        if not line:
+            break
         line = line.strip()
         if not line:
             continue

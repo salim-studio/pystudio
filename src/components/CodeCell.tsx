@@ -201,6 +201,99 @@ export const CodeCell: React.FC<CodeCellProps> = ({
           />
         </div>
       </div>
+
+      {/* Running Spinner Indicator */}
+      {isRunning && (
+        <div className="flex items-center gap-2 px-3 py-2 border-t border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-900/40 text-neutral-500 text-xs font-mono">
+          <div className="w-3.5 h-3.5 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin" />
+          <span>Executing cell...</span>
+        </div>
+      )}
+
+      {/* Inline Cell Output */}
+      {cell.output && !isRunning && (
+        <div className="border-t border-neutral-100 dark:border-neutral-800/60 p-3 space-y-2.5 text-xs bg-neutral-50/30 dark:bg-neutral-900/30 rounded-b-lg">
+          {/* Error display */}
+          {cell.output.error && (
+            <div className="p-2.5 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 font-mono text-xs space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <span>❌ {cell.output.error.type}</span>
+                {cell.output.error.line && (
+                  <span className="text-[10px] px-1 bg-red-200 dark:bg-red-900/60 rounded">
+                    Line {cell.output.error.line}
+                  </span>
+                )}
+              </div>
+              <div className="text-red-600 dark:text-red-400 font-medium">{cell.output.error.message}</div>
+              {cell.output.error.suggestion && (
+                <div className="text-[11px] text-neutral-600 dark:text-neutral-300 font-sans pt-1 border-t border-red-200/60 dark:border-red-900/40">
+                  💡 {cell.output.error.suggestion}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Stdout */}
+          {cell.output.stdout && (
+            <pre className="p-2.5 rounded bg-neutral-900 text-neutral-100 font-mono text-xs overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-60 border border-neutral-800">
+              {cell.output.stdout}
+            </pre>
+          )}
+
+          {/* Stderr */}
+          {cell.output.stderr && (
+            <pre className="p-2 rounded bg-amber-950/20 text-amber-300 font-mono text-xs overflow-x-auto whitespace-pre-wrap border border-amber-900/40">
+              {cell.output.stderr}
+            </pre>
+          )}
+
+          {/* Matplotlib / Seaborn plots */}
+          {cell.output.plots && cell.output.plots.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {cell.output.plots.map((plot, i) => (
+                <div key={i} className="rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1.5 shadow-2xs">
+                  <img src={plot.data} alt={`Plot ${i + 1}`} className="max-h-96 rounded object-contain mx-auto" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* DataFrame or Text representation */}
+          {cell.output.result && cell.output.result.type === 'dataframe' && (
+            <div className="overflow-x-auto rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
+              <table className="w-full text-xs text-left font-mono">
+                <thead className="bg-neutral-100 dark:bg-neutral-800 font-semibold">
+                  <tr>
+                    {cell.output.result.columns?.slice(0, 8).map((col: string) => (
+                      <th key={col} className="p-1.5 border-b border-neutral-200 dark:border-neutral-700 whitespace-nowrap">{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                  {cell.output.result.data?.slice(0, 5).map((row: any, rIdx: number) => (
+                    <tr key={rIdx} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50">
+                      {cell.output.result?.columns?.slice(0, 8).map((col: string) => (
+                        <td key={col} className="p-1.5 whitespace-nowrap text-neutral-700 dark:text-neutral-300">{String(row[col])}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {cell.output.result.total_rows && (
+                <div className="p-1.5 text-[10px] text-neutral-500 bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800">
+                  Showing {Math.min(5, cell.output.result.total_rows)} of {cell.output.result.total_rows} rows × {cell.output.result.total_cols} columns (full view in side panel)
+                </div>
+              )}
+            </div>
+          )}
+
+          {cell.output.result && cell.output.result.type === 'repr' && cell.output.result.value && (
+            <div className="font-mono text-xs text-emerald-700 dark:text-emerald-400 bg-neutral-100/70 dark:bg-neutral-900/70 p-2 rounded border border-neutral-200/60 dark:border-neutral-800">
+              Out[{cell.execution_count || cell.output.execution_count || ''}]: {cell.output.result.value}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

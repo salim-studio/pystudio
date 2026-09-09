@@ -112,10 +112,24 @@ class KernelManager {
   }
 
   public async sendCommand(command: any, timeoutMs: number = 30000): Promise<any> {
-    if (!this.process || !this.isReady) {
+    if (!this.process) {
       this.startKernel();
-      // Wait up to 3s for ready
-      await new Promise((r) => setTimeout(r, 1000));
+    }
+
+    if (!this.isReady) {
+      let waited = 0;
+      while (!this.isReady && waited < 5000) {
+        await new Promise((r) => setTimeout(r, 100));
+        waited += 100;
+      }
+      if (!this.isReady) {
+        this.startKernel();
+        let waited2 = 0;
+        while (!this.isReady && waited2 < 5000) {
+          await new Promise((r) => setTimeout(r, 100));
+          waited2 += 100;
+        }
+      }
     }
 
     const reqId = "req_" + Math.random().toString(36).substring(2, 9);
@@ -207,16 +221,26 @@ app.post("/api/kernel/execute", async (req, res) => {
     return res.status(400).json({ error: "Code must be a string" });
   }
   try {
-    const result = await kernelManager.execute(code);
-    res.json(result);
+    const response = await kernelManager.execute(code);
+    // Directly unwrap data payload matching CellOutput interface
+    if (response && response.data) {
+      res.json(response.data);
+    } else {
+      res.json(response);
+    }
   } catch (e: any) {
     res.status(500).json({
-      status: "error",
+      execution_count: kernelManager.executionCount,
+      stdout: "",
+      stderr: "",
+      result: null,
+      plots: [],
       error: {
         type: "KernelTimeoutOrCrash",
         message: e.message || "Failed to execute code",
         suggestion: "If your code was in an infinite loop, restart the kernel from the toolbar.",
       },
+      elapsed_seconds: 0,
     });
   }
 });
@@ -246,9 +270,23 @@ app.get("/api/kernel/variables", async (req, res) => {
   }
 });
 
+// Ensure pip helper
+async function ensurePip(): Promise<void> {
+  try {
+    await execAsync("python3 -m pip --version");
+  } catch {
+    try {
+      await execAsync("curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && python3 /tmp/get-pip.py --no-warn-script-location");
+    } catch (err) {
+      console.error("Failed to install pip:", err);
+    }
+  }
+}
+
 // Packages: List
 app.get("/api/packages/list", async (req, res) => {
   try {
+    await ensurePip();
     const { stdout } = await execAsync("python3 -m pip list --format=json");
     const packages = JSON.parse(stdout);
     res.json({ status: "success", packages });
@@ -270,8 +308,12 @@ app.post("/api/packages/install", async (req, res) => {
   }
 
   try {
-    const cmd = `python3 -m pip install --user ${upgrade ? "--upgrade" : ""} ${safeName} --no-warn-script-location`;
-    const { stdout, stderr } = await execAsync(cmd, { timeout: 120000 });
+    await ensurePip();
+    const cmd = `python3 -m pip install ${upgrade ? "--upgrade" : ""} ${safeName} --no-warn-script-location --root-user-action=ignore`;
+    const { stdout, stderr } = await execAsync(cmd, { timeout: 180000 });
+    try {
+      await kernelManager.execute("import importlib; importlib.invalidate_caches()");
+    } catch {}
     res.json({ status: "success", stdout, stderr, package: safeName });
   } catch (e: any) {
     res.status(500).json({ status: "error", message: e.message, stderr: e.stderr });
@@ -286,7 +328,11 @@ app.post("/api/packages/uninstall", async (req, res) => {
     return res.status(400).json({ error: "Invalid package name" });
   }
   try {
+    await ensurePip();
     const { stdout, stderr } = await execAsync(`python3 -m pip uninstall -y ${safeName}`, { timeout: 30000 });
+    try {
+      await kernelManager.execute("import importlib; importlib.invalidate_caches()");
+    } catch {}
     res.json({ status: "success", stdout, stderr });
   } catch (e: any) {
     res.status(500).json({ status: "error", message: e.message });
