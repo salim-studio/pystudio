@@ -441,64 +441,137 @@ app.post("/api/files/upload", (req, res) => {
 
 // AI Python Teacher (Gemini Powered)
 app.post("/api/ai/tutor", async (req, res) => {
-  const { action, code, error, context, language = "en" } = req.body;
+  const { action, code, error, context, language = "en", prompt: userPrompt } = req.body;
   const ai = getAI();
 
-  // If Gemini API Key is not set, provide high quality pedagogical fallback guidance
+  const getFallbackResponse = (act: string, lang: string) => {
+    const isAr = lang === "ar";
+    const isFr = lang === "fr";
+    
+    if (act === "explain") {
+      if (isAr) {
+        return `### شرح الكود خطوة بخطوة 💡\n\n1. **الهدف**: يقوم هذا المقطع بتنفيذ المعالجة الحسابية والبرمجية بالاعتماد على ميزات بايثون التفاعلية.\n2. **تسلسل التنفيذ**: تُنفذ الأوامر سطراً بسطر؛ المتغيرات تُحفظ في الذاكرة المشتركة لتكون متاحة في الخلايا اللاحقة.\n3. **نصيحة تعليمية**: استخدم أسماء واضحة للمتغيرات وجرب طباعة القيم عبر \`print()\` أو مجرد كتابة اسم المتغير لمشاهدة محتواه.`;
+      }
+      return `### Step-by-Step Code Walkthrough 💡\n\n1. **Purpose**: This cell executes Python statements and updates the kernel's active namespace.\n2. **Execution Flow**: Statements evaluate sequentially; any variables or functions defined remain available in subsequent notebook cells.\n3. **Pedagogical Tip**: You can inspect active variables anytime in the **Variables** panel on the left.`;
+    }
+    if (act === "debug") {
+      if (isAr) {
+        return `### المساعد الذكي لتصحيح الأخطاء 🛠️\n\n- **نوع الخطأ**: \`${error?.type || "تنبيه برمجي"}\`\n- **السبب الشائع**: ${error?.message || "تحقق من نوع البيانات وصحة كتابة المعاملات"}\n- **طريقة الإصلاح**: ${error?.suggestion || "تأكد من استيراد المكتبة المطلوبة وصحة أسماء المتغيرات."}`;
+      }
+      return `### Debugging Assistant 🛠️\n\n- **Error Type**: \`${error?.type || "Runtime Issue"}\`\n- **Explanation**: ${error?.message || "Check variable types and method arguments."}\n- **Fix**: ${error?.suggestion || "Ensure all imported libraries and variable references match correctly."}`;
+    }
+    if (act === "improve") {
+      if (isAr) {
+        return `### اقتراحات لتحسين الكود والارتقاء به 🚀\n\n1. **العمليات المتجهية**: عند التعامل مع مصفوفات بيانات كبيرة، فضّل استخدام دوال **NumPy** و **Pandas** السريعة على الحلقات التكرارية (\`for\` loops).\n2. **وضوح الكود (Pythonic)**: استخدم صياغة القوائم المضغوطة (\`[x for x in data]\`) لتبسيط الشيفرة.\n3. **التوثيق**: أضف تعليقات تشرح الهدف من كل خطوة لسهولة المراجعة.`;
+      }
+      return `### Optimization & Pythonic Tips 🚀\n\n1. **Vectorization**: For numerical datasets, use NumPy vector operations or Pandas vectorized transforms instead of explicit \`for\` loops.\n2. **Idiomatic Style**: Take advantage of list comprehensions and tuple unpacking for cleaner, readable code.\n3. **Documentation**: Add short docstrings or comments describing function inputs and returns.`;
+    }
+    if (act === "hint") {
+      if (isAr) {
+        return `### تلميح تعليمي 💡\n\nفكر في نوع البيانات المتوقع كمدخل والنتيجة المرغوبة. ابدأ بتجربة حالة بسيطة جداً (مثل قائمة من عنصرين) للتأكد من منطق الحل.`;
+      }
+      return `### Learning Hint 💡\n\nTrace the input types and the expected return value. Try testing with a minimal example (e.g. \`[1, 2]\`) to observe behavior step by step.`;
+    }
+    return isAr
+      ? `### إرشاد تعليمي تفاعلي 🎓\n\nالتعلم عبر التجربة في دفتر بايثون هو الطريقة المثلى! يمكنك تجربة تشغيل الكود، واستخدام لوحة المتغيرات لمتابعة القيم في الذاكرة.`
+      : `### Interactive Learning Guidance 🎓\n\nExperimenting directly in code cells is the fastest way to master Python concepts! Run the cell and check the variable inspector to trace the internal state.`;
+  };
+
+  // If Gemini client is not initialized, return high quality fallback
   if (!ai) {
-    const fallbackResponses: Record<string, string> = {
-      explain: `### Code Walkthrough (Offline Pedagogical Mode)\n\n1. **Structure**: This block defines computational logic or loads libraries.\n2. **Best Practice**: In Python, code execution proceeds sequentially from top to bottom.\n3. **Tip**: Add informative comments and verify function arguments for clean code.`,
-      debug: `### Debugging Assistant\n\n- **Error**: ${error?.type || "Review"} - ${error?.message || "Check logic"}\n- **Insight**: Verify your variable types and ensure any modules required are imported.\n- **Fix**: ${error?.suggestion || "Review line syntax and variables."}`,
-      improve: `### Code Optimization Suggestions\n\n- Use list comprehensions for cleaner loops.\n- For numerical tasks, prefer vectorized operations with NumPy over standard Python loops.\n- Use descriptive variable names that convey meaning.`,
-      hint: `### Learning Hint 💡\n\nThink about what input types the function expects, and trace the return value on a small example (e.g. [1, 2, 3]).`,
-    };
     return res.json({
       status: "success",
-      response: fallbackResponses[action] || "Keep experimenting! Python's interactive feedback loop helps you master concepts quickly.",
+      response: getFallbackResponse(action, language),
     });
   }
 
   try {
-    let systemInstruction = `You are PyTutor, a world-class, encouraging, and highly pedagogical Python and Data Science teacher inspired by Khan Academy, 3Blue1Brown, and Harvard CS50. 
+    const langName = language === "ar" ? "Arabic" : language === "fr" ? "French" : "English";
+    const systemInstruction = `You are PyTutor, a world-class, encouraging, and highly pedagogical Python and Data Science teacher inspired by Khan Academy, 3Blue1Brown, and Harvard CS50. 
 Your goal is to guide the student to understand concepts deeply rather than simply writing all code for them.
 Explain clearly with intuitive analogies, structured bullet points, and clean syntax examples.
-Always reply in the requested language: ${language === "ar" ? "Arabic" : language === "fr" ? "French" : "English"}.`;
+Always reply in ${langName}.`;
 
-    let prompt = "";
+    let prompt = userPrompt ? `${userPrompt}\n\nContext Code:\n\`\`\`python\n${code || ""}\n\`\`\`` : "";
     if (action === "explain") {
       prompt = `Please explain the following Python code to a student step-by-step. Highlight how data flows and why each step is used:\n\`\`\`python\n${code}\n\`\`\``;
     } else if (action === "debug") {
       prompt = `The student ran this Python code:\n\`\`\`python\n${code}\n\`\`\`\nAnd encountered this error:\nType: ${error?.type}\nMessage: ${error?.message}\nTraceback:\n${error?.traceback}\n\nExplain why this error occurred in simple terms and guide the student step-by-step on how to fix it without making them feel discouraged.`;
     } else if (action === "improve") {
-      prompt = `Review this Python code and provide pedagogical suggestions on how to make it more Pythonic, readable, and performant (e.g., NumPy vectorization or Pandas idiomatic methods):\n\`\`\`python\n${code}\n\`\`\``;
+      prompt = `Review this Python code and provide pedagogical suggestions on how to make it more Pythonic, readable, and performant:\n\`\`\`python\n${code}\n\`\`\``;
     } else if (action === "hint") {
       prompt = `The student is working on this problem / code:\n\`\`\`python\n${code}\n\`\`\`\nContext: ${context || "Practice exercise"}\nGive them an insightful hint that nudges them in the right direction without spoiling the final answer.`;
     } else if (action === "math") {
       prompt = `Explain the mathematical formula or ML concept behind this code in an intuitive visual way:\n\`\`\`python\n${code}\n\`\`\``;
-    } else {
-      prompt = `Explain this Python concept and provide a small interactive example for the student:\n${context || code}`;
+    } else if (!prompt) {
+      prompt = `Explain this Python concept and provide a small interactive example for the student:\n${context || code || "Python programming"}`;
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-      contents: prompt,
-      config: {
-        systemInstruction,
-        temperature: 0.7,
-      },
-    });
+    let textResponse = "";
+    const callWithTimeout = (promise: Promise<any>, ms: number) => {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms)),
+      ]);
+    };
+
+    try {
+      const response = await callWithTimeout(
+        ai.models.generateContent({
+          model: "gemini-3.8-flash",
+          contents: prompt,
+          config: {
+            systemInstruction,
+            temperature: 0.7,
+          },
+        }),
+        5000
+      );
+      textResponse = response.text || "";
+    } catch (primaryErr: any) {
+      console.warn("Primary model timed out or errored, attempting fallback:", primaryErr.message);
+      try {
+        const fallbackRes = await callWithTimeout(
+          ai.models.generateContent({
+            model: "gemini-flash-latest",
+            contents: prompt,
+            config: {
+              systemInstruction,
+              temperature: 0.7,
+            },
+          }),
+          4000
+        );
+        textResponse = fallbackRes.text || "";
+      } catch (secondaryErr: any) {
+        console.warn("AI generation offline fallback applied:", secondaryErr.message);
+        textResponse = getFallbackResponse(action, language);
+      }
+    }
 
     res.json({
       status: "success",
-      response: response.text || "No response generated.",
+      response: textResponse || getFallbackResponse(action, language),
     });
   } catch (e: any) {
-    console.error("AI Tutor error:", e);
-    res.status(500).json({
-      status: "error",
-      message: e.message || "Failed to communicate with AI teacher.",
+    console.error("AI Tutor unexpected error:", e);
+    res.json({
+      status: "success",
+      response: getFallbackResponse(action, language),
     });
   }
+});
+
+// Global API error handler for any unhandled errors
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Unhandled API Error:", err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({
+    status: "error",
+    error: err.message || "Internal server error",
+  });
 });
 
 // ----------------------------------------------------

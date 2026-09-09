@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../translations';
+import { safeFetch } from '../lib/api';
 
 interface UploadDatasetModalProps {
   isOpen: boolean;
@@ -44,17 +45,16 @@ export const UploadDatasetModal: React.FC<UploadDatasetModalProps> = ({
     formData.append('targetPath', `workspace/data/${file.name}`);
 
     try {
-      const res = await fetch('/api/files/upload', {
+      const res = await safeFetch<any>('/api/files/upload', {
         method: 'POST',
         body: formData
-      });
+      }, 30000);
 
-      const data = await res.json();
-      if (data.status === 'success') {
+      if (res.ok && res.data?.status === 'success') {
         onUploadSuccess(file.name, `workspace/data/${file.name}`);
         onClose();
       } else {
-        setError(data.message || 'Failed to upload dataset');
+        setError(res.error || res.data?.message || 'Failed to upload dataset');
       }
     } catch (e: any) {
       setError(e.message || 'Network error occurred during upload');

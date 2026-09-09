@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { PythonPackage, Language } from '../types';
 import { translations } from '../translations';
+import { safeFetch } from '../lib/api';
 
 interface PackageManagerModalProps {
   isOpen: boolean;
@@ -59,10 +60,9 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
   const fetchInstalled = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/packages/list');
-      const data = await res.json();
-      if (data.packages) {
-        setInstalledPackages(data.packages);
+      const res = await safeFetch<{ packages: PythonPackage[] }>('/api/packages/list', undefined, 15000);
+      if (res.ok && res.data?.packages) {
+        setInstalledPackages(res.data.packages);
       }
     } catch (e) {
       console.error('Failed to fetch packages:', e);
@@ -81,20 +81,20 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
     setInstallingName(pkgName);
     setInstallLog(`Installing ${pkgName} via pip... please wait.`);
     try {
-      const res = await fetch('/api/packages/install', {
+      const res = await safeFetch<any>('/api/packages/install', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageName: pkgName })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        setInstallLog(`✓ Successfully installed ${pkgName}!\n${data.stdout || ''}`);
+      }, 60000);
+
+      if (res.ok && res.data?.status === 'success') {
+        setInstallLog(`✓ Successfully installed ${pkgName}!\n${res.data.stdout || ''}`);
         await fetchInstalled();
       } else {
-        setInstallLog(`❌ Installation failed: ${data.message || data.stderr}`);
+        setInstallLog(`❌ Installation failed: ${res.error || res.data?.message || 'Server timeout or network error'}`);
       }
     } catch (e: any) {
-      setInstallLog(`❌ Error: ${e.message}`);
+      setInstallLog(`❌ Error: ${e.message || 'Installation encountered an issue.'}`);
     } finally {
       setInstallingName(null);
     }
@@ -105,20 +105,20 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
     setInstallingName(pkgName);
     setInstallLog(`Uninstalling ${pkgName}...`);
     try {
-      const res = await fetch('/api/packages/uninstall', {
+      const res = await safeFetch<any>('/api/packages/uninstall', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageName: pkgName })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
+      }, 25000);
+
+      if (res.ok && res.data?.status === 'success') {
         setInstallLog(`✓ Successfully uninstalled ${pkgName}`);
         await fetchInstalled();
       } else {
-        setInstallLog(`❌ Uninstall failed: ${data.message}`);
+        setInstallLog(`❌ Uninstall failed: ${res.error || res.data?.message || 'Server timeout'}`);
       }
     } catch (e: any) {
-      setInstallLog(`❌ Error: ${e.message}`);
+      setInstallLog(`❌ Error: ${e.message || 'Failed to uninstall package.'}`);
     } finally {
       setInstallingName(null);
     }

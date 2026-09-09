@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Language, AppMode } from '../types';
 import { translations } from '../translations';
+import { safeFetch } from '../lib/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -67,7 +68,7 @@ export const AITutorDrawer: React.FC<AITutorDrawerProps> = ({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/ai/tutor', {
+      const res = await safeFetch<{ response?: string }>('/api/ai/tutor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,16 +79,25 @@ export const AITutorDrawer: React.FC<AITutorDrawerProps> = ({
           mode,
           action: actionType
         })
-      });
+      }, 15000);
 
-      const data = await res.json();
-      if (data.response) {
-        setMessages([...newMessages, { role: 'assistant', content: data.response }]);
+      if (res.ok && res.data?.response) {
+        setMessages([...newMessages, { role: 'assistant', content: res.data.response }]);
       } else {
-        setMessages([...newMessages, { role: 'assistant', content: 'Apologies, I encountered a temporary connection issue. Please try again.' }]);
+        setMessages([...newMessages, { 
+          role: 'assistant', 
+          content: res.error || (language === 'ar' 
+            ? 'عذراً، حدث انقطاع مؤقت في الاتصال. يمكنك إعادة المحاولة وسأساعدك فوراً!' 
+            : 'Apologies, there was a temporary connection issue. Please try again!')
+        }]);
       }
-    } catch (e: any) {
-      setMessages([...newMessages, { role: 'assistant', content: `Error: ${e.message}` }]);
+    } catch {
+      setMessages([...newMessages, { 
+        role: 'assistant', 
+        content: language === 'ar' 
+          ? 'تعذر الاتصال بالمعلم الذكي مؤقتاً. يرجى إعادة المحاولة.' 
+          : 'Unable to reach the AI tutor temporarily. Please try again.' 
+      }]);
     } finally {
       setLoading(false);
     }

@@ -19,6 +19,7 @@ import { OutputPanel } from './components/OutputPanel';
 import { PackageManagerModal } from './components/PackageManagerModal';
 import { UploadDatasetModal } from './components/UploadDatasetModal';
 import { AITutorDrawer } from './components/AITutorDrawer';
+import { safeFetch } from './lib/api';
 
 // Initial default notebook
 const INITIAL_NOTEBOOK: Notebook = {
@@ -109,35 +110,34 @@ export default function App() {
   // Initial data loading (Kernel status, variables, files tree)
   const fetchKernelStatus = async () => {
     try {
-      const res = await fetch('/api/kernel/status');
-      const data = await res.json();
-      setKernelStatus(data);
-    } catch (e) {
-      console.error('Failed to fetch kernel status:', e);
+      const res = await safeFetch<KernelStatus>('/api/kernel/status', undefined, 5000);
+      if (res.ok && res.data) {
+        setKernelStatus(res.data);
+      }
+    } catch {
+      // safe fallback
     }
   };
 
   const fetchVariables = async () => {
     try {
-      const res = await fetch('/api/kernel/variables');
-      const data = await res.json();
-      if (data.variables) {
-        setVariables(data.variables);
+      const res = await safeFetch<{ variables: KernelVariable[] }>('/api/kernel/variables', undefined, 5000);
+      if (res.ok && res.data?.variables) {
+        setVariables(res.data.variables);
       }
-    } catch (e) {
-      console.error('Failed to fetch kernel variables:', e);
+    } catch {
+      // safe fallback
     }
   };
 
   const fetchFilesTree = async () => {
     try {
-      const res = await fetch('/api/files/tree');
-      const data = await res.json();
-      if (data.tree) {
-        setFilesTree(data.tree);
+      const res = await safeFetch<{ tree: FileItem[] }>('/api/files/tree', undefined, 5000);
+      if (res.ok && res.data?.tree) {
+        setFilesTree(res.data.tree);
       }
-    } catch (e) {
-      console.error('Failed to fetch files tree:', e);
+    } catch {
+      // safe fallback
     }
   };
 
@@ -172,14 +172,31 @@ export default function App() {
     setExecutionCounter(nextCount);
 
     try {
-      const res = await fetch('/api/kernel/execute', {
+      const res = await safeFetch<any>('/api/kernel/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: targetCell.source })
-      });
+      }, 45000);
 
-      const raw = await res.json();
-      const output = raw?.data || raw;
+      let output: any;
+      if (res.ok && res.data) {
+        output = res.data.data || res.data;
+      } else {
+        output = {
+          execution_count: nextCount,
+          stdout: '',
+          stderr: '',
+          result: null,
+          plots: [],
+          error: {
+            type: 'Notice',
+            message: res.error || 'Server response could not be loaded.',
+            suggestion: 'If the server was restarting or timed out, simply re-run this cell.'
+          },
+          elapsed_seconds: 0
+        };
+      }
+
       setLastExecutionTime(output.elapsed_seconds || 0.05);
 
       // Save output to cell
@@ -204,7 +221,7 @@ export default function App() {
       fetchVariables();
       fetchKernelStatus();
     } catch (e: any) {
-      console.error('Execution failed:', e);
+      console.error('Execution notice:', e);
     } finally {
       setRunningCellIndex(null);
     }
