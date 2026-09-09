@@ -36,7 +36,17 @@ const INITIAL_NOTEBOOK: Notebook = {
     {
       id: 'c2',
       cell_type: 'code',
-      source: `# 1. Python Basics & Variables\nname = "Python Studio"\nversion = "3.10"\nfeatures = ["NumPy", "Pandas", "Matplotlib", "Scikit-Learn", "Statsmodels"]\n\nprint(f"Welcome to {name} (Kernel: Python {version})!")\nprint(f"Preloaded scientific modules: {', '.join(features)}")`
+      execution_count: 1,
+      source: `# 1. Python Basics & Variables\nname = "Python Studio"\nversion = "3.10"\nfeatures = ["NumPy", "Pandas", "Matplotlib", "Scikit-Learn", "Statsmodels"]\n\nprint(f"Welcome to {name} (Kernel: Python {version})!")\nprint(f"Preloaded scientific modules: {', '.join(features)}")`,
+      output: {
+        execution_count: 1,
+        stdout: "Welcome to Python Studio (Kernel: Python 3.10)!\nPreloaded scientific modules: NumPy, Pandas, Matplotlib, Scikit-Learn, Statsmodels\n",
+        stderr: "",
+        result: null,
+        plots: [],
+        error: null,
+        elapsed_seconds: 0.001
+      }
     },
     {
       id: 'c3',
@@ -71,8 +81,8 @@ export default function App() {
   // Kernel & Telemetry state
   const [kernelStatus, setKernelStatus] = useState<KernelStatus | null>(null);
   const [variables, setVariables] = useState<KernelVariable[]>([]);
-  const [lastExecutionTime, setLastExecutionTime] = useState<number | null>(null);
-  const [executionCounter, setExecutionCounter] = useState<number>(0);
+  const [lastExecutionTime, setLastExecutionTime] = useState<number | null>(0.001);
+  const [executionCounter, setExecutionCounter] = useState<number>(1);
 
   // Sidebar & Modals state
   const [sidebarTab, setSidebarTab] = useState<ActiveTab>('courses');

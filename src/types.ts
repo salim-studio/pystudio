@@ -1,6 +1,7 @@
 export type CellType = 'code' | 'markdown';
 
 export interface CellOutput {
+  execution_count?: number | null;
   stdout?: string;
   stderr?: string;
   result?: {
