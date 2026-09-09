@@ -1,0 +1,6 @@
+{
+  "name": "PyStudio - Python & Data Science Learning Platform",
+  "description": "An interactive Python, Data Science, and Machine Learning notebook studio with real-time execution, variable inspector, package manager, and AI tutor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

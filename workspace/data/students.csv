@@ -1,0 +1,21 @@
+student_id,name,study_hours,attendance_pct,previous_score,passed_exam,final_grade
+1,Emma Watson,8.5,95.0,88,1,92.5
+2,Liam Smith,4.2,78.5,65,1,71.0
+3,Noah Johnson,2.1,62.0,52,0,54.2
+4,Olivia Brown,7.8,91.0,82,1,87.0
+5,William Jones,5.5,84.0,70,1,76.5
+6,Ava Garcia,9.2,98.0,94,1,96.8
+7,James Miller,3.0,68.0,58,0,59.0
+8,Sophia Davis,6.7,89.5,75,1,81.2
+9,Benjamin Rodriguez,1.5,55.0,45,0,48.0
+10,Isabella Martinez,8.0,93.0,85,1,89.4
+11,Lucas Hernandez,4.8,80.0,68,1,73.1
+12,Mia Lopez,7.1,88.0,79,1,83.5
+13,Henry Gonzalez,2.8,64.0,55,0,56.8
+14,Charlotte Wilson,9.0,96.0,91,1,94.0
+15,Alexander Anderson,5.0,82.5,72,1,77.2
+16,Amelia Thomas,6.4,87.0,76,1,80.5
+17,Daniel Taylor,3.5,71.0,60,0,62.4
+18,Harper Moore,8.2,94.0,86,1,90.2
+19,Matthew Jackson,4.0,76.0,63,1,68.5
+20,Evelyn Martin,7.5,90.0,80,1,85.0
