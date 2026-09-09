@@ -53,6 +53,7 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
   const [customPackageInput, setCustomPackageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [installLog, setInstallLog] = useState<string | null>(null);
+  const [failedPkg, setFailedPkg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'installed' | 'marketplace'>('installed');
 
   const t = translations[language];
@@ -79,22 +80,27 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
 
   const handleInstall = async (pkgName: string) => {
     setInstallingName(pkgName);
+    setFailedPkg(null);
     setInstallLog(`Installing ${pkgName} via pip... please wait.`);
     try {
       const res = await safeFetch<any>('/api/packages/install', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageName: pkgName })
-      }, 60000);
+      }, 75000, 2);
 
       if (res.ok && res.data?.status === 'success') {
         setInstallLog(`✓ Successfully installed ${pkgName}!\n${res.data.stdout || ''}`);
+        setFailedPkg(null);
         await fetchInstalled();
       } else {
-        setInstallLog(`❌ Installation failed: ${res.error || res.data?.message || 'Server timeout or network error'}`);
+        const errorMsg = res.data?.message || res.error || 'Server reconnecting. Please retry.';
+        setInstallLog(`❌ Installation failed for ${pkgName}:\n${errorMsg}`);
+        setFailedPkg(pkgName);
       }
     } catch (e: any) {
       setInstallLog(`❌ Error: ${e.message || 'Installation encountered an issue.'}`);
+      setFailedPkg(pkgName);
     } finally {
       setInstallingName(null);
     }
@@ -225,8 +231,31 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
 
         {/* Install progress output / logs */}
         {installLog && (
-          <div className="p-3 bg-neutral-900 text-neutral-200 font-mono text-xs border-b border-neutral-800 max-h-28 overflow-y-auto whitespace-pre-wrap">
-            {installLog}
+          <div className="p-3 bg-neutral-900 text-neutral-200 font-mono text-xs border-b border-neutral-800 flex flex-col gap-2">
+            <div className="max-h-28 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+              {installLog}
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1 border-t border-neutral-800">
+              {failedPkg && (
+                <button
+                  onClick={() => handleInstall(failedPkg)}
+                  disabled={!!installingName}
+                  className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-sans text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <RefreshCw className={`w-3 h-3 ${installingName ? 'animate-spin' : ''}`} />
+                  <span>Retry Install ({failedPkg})</span>
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setInstallLog(null);
+                  setFailedPkg(null);
+                }}
+                className="px-2 py-1 rounded hover:bg-neutral-800 text-neutral-400 hover:text-neutral-200 font-sans text-xs transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         )}
 

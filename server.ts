@@ -291,7 +291,7 @@ app.get("/api/packages/list", async (req, res) => {
     const packages = JSON.parse(stdout);
     res.json({ status: "success", packages });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.json({ status: "error", packages: [], message: e.message });
   }
 });
 
@@ -299,12 +299,12 @@ app.get("/api/packages/list", async (req, res) => {
 app.post("/api/packages/install", async (req, res) => {
   const { packageName, upgrade } = req.body;
   if (!packageName || typeof packageName !== "string") {
-    return res.status(400).json({ error: "Package name is required" });
+    return res.status(400).json({ status: "error", message: "Package name is required" });
   }
-  // Sanitize package name (letters, numbers, hyphens, underscores, dots, brackets)
-  const safeName = packageName.trim().replace(/[^a-zA-Z0-9_\-\.\[\]<>=]/g, "");
+  // Sanitize package name (letters, numbers, hyphens, underscores, dots, brackets, version operators)
+  const safeName = packageName.trim().replace(/[^a-zA-Z0-9_\-\.\[\]<>=!]/g, "");
   if (!safeName) {
-    return res.status(400).json({ error: "Invalid package name" });
+    return res.status(400).json({ status: "error", message: "Invalid package name" });
   }
 
   try {
@@ -316,7 +316,15 @@ app.post("/api/packages/install", async (req, res) => {
     } catch {}
     res.json({ status: "success", stdout, stderr, package: safeName });
   } catch (e: any) {
-    res.status(500).json({ status: "error", message: e.message, stderr: e.stderr });
+    const errorMsg = e.stderr?.trim() || e.stdout?.trim() || e.message || "Failed to install package via pip";
+    // Return status 200 with status: "error" so reverse proxies/CDNs don't swap the response with custom 500/502 HTML pages
+    res.json({
+      status: "error",
+      message: errorMsg,
+      stderr: e.stderr || "",
+      stdout: e.stdout || "",
+      package: safeName,
+    });
   }
 });
 
@@ -325,7 +333,7 @@ app.post("/api/packages/uninstall", async (req, res) => {
   const { packageName } = req.body;
   const safeName = (packageName || "").trim().replace(/[^a-zA-Z0-9_\-\.]/g, "");
   if (!safeName) {
-    return res.status(400).json({ error: "Invalid package name" });
+    return res.status(400).json({ status: "error", message: "Invalid package name" });
   }
   try {
     await ensurePip();
@@ -333,9 +341,9 @@ app.post("/api/packages/uninstall", async (req, res) => {
     try {
       await kernelManager.execute("import importlib; importlib.invalidate_caches()");
     } catch {}
-    res.json({ status: "success", stdout, stderr });
+    res.json({ status: "success", stdout, stderr, package: safeName });
   } catch (e: any) {
-    res.status(500).json({ status: "error", message: e.message });
+    res.json({ status: "error", message: e.stderr || e.message, package: safeName });
   }
 });
 
