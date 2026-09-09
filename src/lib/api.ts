@@ -33,7 +33,7 @@ export async function safeFetch<T = any>(
   url: string,
   options?: RequestInit,
   timeoutMs: number = 30000,
-  retries: number = 2
+  retries: number = 4
 ): Promise<SafeFetchResult<T>> {
   let attempt = 0;
 
@@ -54,12 +54,13 @@ export async function safeFetch<T = any>(
 
       // If response is not OK
       if (!res.ok) {
-        // If it's a transient proxy error (404/502/503/504) and we have retries left, wait and retry
+        // If it's a transient proxy/container restart error (404/502/503/504) and we have retries left, wait and retry
         if (
           (res.status === 404 || res.status === 502 || res.status === 503 || res.status === 504) &&
           attempt <= retries
         ) {
-          await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+          const delay = Math.min(attempt * 1000, 3000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
 

@@ -221,10 +221,12 @@ export default function App() {
         return { ...nb, cells: updatedCells };
       }));
 
-      // Set AI context if there is an error
+      // Set AI context if there is an error, or clear it if successful
       if (output.error) {
         setAiContextCode(targetCell.source);
         setAiContextError(output.error);
+      } else {
+        setAiContextError(null);
       }
 
       // Refresh variable inspector
@@ -561,9 +563,6 @@ export default function App() {
     setOpenNotebooks(prev => [...prev, lessonNb]);
     setActiveNotebookId(lessonNb.id);
     setActiveCellIndex(1);
-    setTimeout(() => {
-      handleRunCell(1);
-    }, 100);
   };
 
   // Load exercise into active notebook
