@@ -36,7 +36,7 @@ const INITIAL_NOTEBOOK: Notebook = {
     {
       id: 'c2',
       cell_type: 'code',
-      source: `# 1. Python Basics & Variables\nname = "Python Studio"\nversion = 3.10\nfeatures = ["NumPy", "Pandas", "Matplotlib", "Scikit-Learn", "Statsmodels"]\n\nprint(f"Welcome to {name} (Kernel: Python {version})!")\nprint(f"Preloaded scientific modules: {', '.join(features)}")`
+      source: `# 1. Python Basics & Variables\nname = "Python Studio"\nversion = "3.10"\nfeatures = ["NumPy", "Pandas", "Matplotlib", "Scikit-Learn", "Statsmodels"]\n\nprint(f"Welcome to {name} (Kernel: Python {version})!")\nprint(f"Preloaded scientific modules: {', '.join(features)}")`
     },
     {
       id: 'c3',
@@ -46,7 +46,7 @@ const INITIAL_NOTEBOOK: Notebook = {
     {
       id: 'c4',
       cell_type: 'code',
-      source: `import matplotlib.pyplot as plt\nimport seaborn as sns\n\n# 3. High-Resolution Statistical Plot\nplt.figure(figsize=(7, 4))\nsns.scatterplot(data=df, x='hours_studied', y='final_score', hue='passed', palette={True: '#10b981', False: '#ef4444'}, s=80)\nplt.title('Final Exam Score vs. Hours Studied', fontsize=12, fontweight='bold')\nplt.xlabel('Hours Studied per Week')\nplt.ylabel('Final Score (%)')\nplt.grid(True, linestyle='--', alpha=0.5)\nplt.tight_layout()\nplt.show()`
+      source: `import matplotlib.pyplot as plt\nimport seaborn as sns\n\n# 3. High-Resolution Statistical Plot\nplt.figure(figsize=(7, 4))\nsns.scatterplot(data=df, x='study_hours', y='final_grade', hue='passed_exam', palette={1: '#10b981', 0: '#ef4444'}, s=80)\nplt.title('Final Exam Grade vs. Study Hours', fontsize=12, fontweight='bold')\nplt.xlabel('Study Hours per Week')\nplt.ylabel('Final Grade (%)')\nplt.grid(True, linestyle='--', alpha=0.5)\nplt.tight_layout()\nplt.show()`
     },
     {
       id: 'c5',
