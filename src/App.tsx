@@ -237,6 +237,24 @@ export default function App() {
     }
   };
 
+  // Clear notice or error on cell
+  const handleClearError = (cellIdx: number) => {
+    setOpenNotebooks(prev => prev.map(nb => {
+      if (nb.id !== activeNotebookId) return nb;
+      const updatedCells = [...nb.cells];
+      if (updatedCells[cellIdx]?.output) {
+        updatedCells[cellIdx] = {
+          ...updatedCells[cellIdx],
+          output: {
+            ...updatedCells[cellIdx].output,
+            error: null,
+          }
+        };
+      }
+      return { ...nb, cells: updatedCells };
+    }));
+  };
+
   // Run cell and select next
   const handleRunAndSelectNext = async (cellIdx: number) => {
     await handleRunCell(cellIdx);
@@ -671,6 +689,7 @@ export default function App() {
             }}
             onRefreshVariables={fetchVariables}
             onRunCell={handleRunCell}
+            onClearError={handleClearError}
           />
         </div>
 

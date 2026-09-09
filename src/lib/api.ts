@@ -44,6 +44,7 @@ export async function safeFetch<T = any>(
 
     try {
       const res = await fetch(url, {
+        credentials: "include",
         ...options,
         signal: controller.signal,
       });

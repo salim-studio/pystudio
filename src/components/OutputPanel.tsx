@@ -31,6 +31,7 @@ interface OutputPanelProps {
   onAskAiExplain: (code: string) => void;
   onRefreshVariables: () => void;
   onRunCell?: (index: number) => void;
+  onClearError?: (index: number) => void;
 }
 
 export const OutputPanel: React.FC<OutputPanelProps> = ({
@@ -44,7 +45,8 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
   onAskAiDebug,
   onAskAiExplain,
   onRefreshVariables,
-  onRunCell
+  onRunCell,
+  onClearError,
 }) => {
   const [activeTab, setActiveTab] = useState<'output' | 'variables'>('output');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -250,6 +252,15 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
                           >
                             <RotateCcw className={`w-3 h-3 ${isRunning ? 'animate-spin' : ''}`} />
                             <span>Re-run Cell</span>
+                          </button>
+                        )}
+                        {onClearError && output.error.type === 'Notice' && (
+                          <button
+                            onClick={() => onClearError(activeCellIndex)}
+                            className="flex items-center gap-1 px-2 py-1 rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-medium text-[11px] transition-colors cursor-pointer"
+                            title="Dismiss Notice"
+                          >
+                            <span>Dismiss</span>
                           </button>
                         )}
                         <button
