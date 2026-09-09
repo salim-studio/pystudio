@@ -176,7 +176,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: targetCell.source })
-      }, 45000);
+      }, 45000, 3);
 
       let output: any;
       if (res.ok && res.data) {
@@ -660,6 +660,7 @@ export default function App() {
               setIsAiTutorOpen(true);
             }}
             onRefreshVariables={fetchVariables}
+            onRunCell={handleRunCell}
           />
         </div>
 

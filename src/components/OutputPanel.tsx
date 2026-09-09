@@ -30,6 +30,7 @@ interface OutputPanelProps {
   onAskAiDebug: (code: string, error: any) => void;
   onAskAiExplain: (code: string) => void;
   onRefreshVariables: () => void;
+  onRunCell?: (index: number) => void;
 }
 
 export const OutputPanel: React.FC<OutputPanelProps> = ({
@@ -42,7 +43,8 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
   language,
   onAskAiDebug,
   onAskAiExplain,
-  onRefreshVariables
+  onRefreshVariables,
+  onRunCell
 }) => {
   const [activeTab, setActiveTab] = useState<'output' | 'variables'>('output');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -218,10 +220,18 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
 
                 {/* 2. Error Display (if any) */}
                 {output.error && (
-                  <div className="rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 p-3 space-y-2.5 text-xs">
+                  <div className={`rounded-lg border p-3 space-y-2.5 text-xs ${
+                    output.error.type === 'Notice'
+                      ? 'border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/30'
+                      : 'border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30'
+                  }`}>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-red-700 dark:text-red-400 font-bold text-sm">
-                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                      <div className={`flex items-center gap-1.5 font-bold text-sm ${
+                        output.error.type === 'Notice'
+                          ? 'text-amber-700 dark:text-amber-400'
+                          : 'text-red-700 dark:text-red-400'
+                      }`}>
+                        <AlertTriangle className={`w-4 h-4 ${output.error.type === 'Notice' ? 'text-amber-600' : 'text-red-600'}`} />
                         <span>{output.error.type}</span>
                         {output.error.line && (
                           <span className="text-xs font-normal text-red-500 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded">
@@ -230,22 +240,43 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
                         )}
                       </div>
 
-                      <button
-                        onClick={() => onAskAiDebug(cellCode, output.error)}
-                        className="flex items-center gap-1 px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white font-medium text-[11px] shadow-xs transition-colors"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        <span>{t.askAiToDebug}</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        {onRunCell && (
+                          <button
+                            onClick={() => onRunCell(activeCellIndex)}
+                            disabled={isRunning}
+                            className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium text-[11px] shadow-xs transition-colors cursor-pointer"
+                            title="Re-run Cell"
+                          >
+                            <RotateCcw className={`w-3 h-3 ${isRunning ? 'animate-spin' : ''}`} />
+                            <span>Re-run Cell</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onAskAiDebug(cellCode, output.error)}
+                          className="flex items-center gap-1 px-2 py-1 rounded bg-neutral-800 dark:bg-neutral-700 hover:bg-neutral-900 text-white font-medium text-[11px] shadow-xs transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-300" />
+                          <span>{t.askAiToDebug}</span>
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="font-mono text-red-800 dark:text-red-300 text-xs">
+                    <div className={`font-mono text-xs ${
+                      output.error.type === 'Notice'
+                        ? 'text-amber-900 dark:text-amber-200'
+                        : 'text-red-800 dark:text-red-300'
+                    }`}>
                       {output.error.message}
                     </div>
 
                     {/* Suggested Solution Card */}
                     {output.error.suggestion && (
-                      <div className="p-2.5 rounded bg-white dark:bg-neutral-900 border border-red-200 dark:border-red-800 text-[11px] space-y-1">
+                      <div className={`p-2.5 rounded border text-[11px] space-y-1 ${
+                        output.error.type === 'Notice'
+                          ? 'bg-amber-100/50 dark:bg-neutral-900 border-amber-200 dark:border-amber-800/80'
+                          : 'bg-white dark:bg-neutral-900 border-red-200 dark:border-red-800'
+                      }`}>
                         <div className="font-semibold text-neutral-800 dark:text-neutral-200">
                           {t.suggestedFix}
                         </div>
@@ -255,22 +286,24 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
                       </div>
                     )}
 
-                    {/* Traceback toggle/copy */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[10px] text-neutral-500 uppercase font-semibold">
-                        <span>Traceback</span>
-                        <button
-                          onClick={() => handleCopyTraceback(output.error?.traceback || '')}
-                          className="flex items-center gap-1 hover:text-neutral-700 dark:hover:text-neutral-300"
-                        >
-                          {copiedTraceback ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                          <span>{copiedTraceback ? 'Copied' : 'Copy'}</span>
-                        </button>
+                    {/* Traceback toggle/copy - only displayed if traceback exists */}
+                    {Boolean(output.error.traceback) && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] text-neutral-500 uppercase font-semibold">
+                          <span>Traceback</span>
+                          <button
+                            onClick={() => handleCopyTraceback(output.error?.traceback || '')}
+                            className="flex items-center gap-1 hover:text-neutral-700 dark:hover:text-neutral-300 cursor-pointer"
+                          >
+                            {copiedTraceback ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedTraceback ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
+                        <pre className="p-2 rounded bg-neutral-900 text-red-300 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap max-h-40">
+                          {output.error.traceback}
+                        </pre>
                       </div>
-                      <pre className="p-2 rounded bg-neutral-900 text-red-300 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap max-h-40">
-                        {output.error.traceback}
-                      </pre>
-                    </div>
+                    )}
                   </div>
                 )}
 

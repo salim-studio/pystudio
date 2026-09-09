@@ -215,18 +215,37 @@ export const CodeCell: React.FC<CodeCellProps> = ({
         <div className="border-t border-neutral-100 dark:border-neutral-800/60 p-3 space-y-2.5 text-xs bg-neutral-50/30 dark:bg-neutral-900/30 rounded-b-lg">
           {/* Error display */}
           {cell.output.error && (
-            <div className="p-2.5 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 font-mono text-xs space-y-1">
-              <div className="font-bold flex items-center gap-1.5">
-                <span>❌ {cell.output.error.type}</span>
-                {cell.output.error.line && (
-                  <span className="text-[10px] px-1 bg-red-200 dark:bg-red-900/60 rounded">
-                    Line {cell.output.error.line}
-                  </span>
-                )}
+            <div className={`p-2.5 rounded font-mono text-xs space-y-1 ${
+              cell.output.error.type === 'Notice'
+                ? 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-200'
+                : 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300'
+            }`}>
+              <div className="font-bold flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span>{cell.output.error.type === 'Notice' ? '⚠️ Notice' : `❌ ${cell.output.error.type}`}</span>
+                  {cell.output.error.line && (
+                    <span className="text-[10px] px-1 bg-red-200 dark:bg-red-900/60 rounded">
+                      Line {cell.output.error.line}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRun();
+                  }}
+                  className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-sans text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Run Cell"
+                >
+                  <Play className="w-2.5 h-2.5 fill-current" />
+                  <span>Run</span>
+                </button>
               </div>
-              <div className="text-red-600 dark:text-red-400 font-medium">{cell.output.error.message}</div>
+              <div className={`font-medium ${cell.output.error.type === 'Notice' ? 'text-amber-700 dark:text-amber-300' : 'text-red-600 dark:text-red-400'}`}>
+                {cell.output.error.message}
+              </div>
               {cell.output.error.suggestion && (
-                <div className="text-[11px] text-neutral-600 dark:text-neutral-300 font-sans pt-1 border-t border-red-200/60 dark:border-red-900/40">
+                <div className="text-[11px] text-neutral-600 dark:text-neutral-300 font-sans pt-1 border-t border-neutral-200/60 dark:border-neutral-800/40">
                   💡 {cell.output.error.suggestion}
                 </div>
               )}
