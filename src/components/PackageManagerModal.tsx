@@ -51,7 +51,8 @@ const INITIAL_PRELOADED_PACKAGES: PythonPackage[] = [
   { name: 'scipy', version: '1.15.3' },
   { name: 'statsmodels', version: '0.15.0' },
   { name: 'sympy', version: '1.14.0' },
-  { name: 'plotly', version: '7.0.0' }
+  { name: 'plotly', version: '7.0.0' },
+  { name: 'polars', version: '1.44.2' }
 ];
 
 export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
@@ -106,7 +107,7 @@ export const PackageManagerModal: React.FC<PackageManagerModalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageName: pkgName })
-      }, 75000, 2);
+      }, 90000, 4);
 
       if (res.ok && res.data?.status === 'success') {
         setInstallLog(`✓ Successfully installed ${pkgName}!\n${res.data.stdout || ''}`);
