@@ -42,6 +42,10 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
         <span className="hidden lg:inline">
           Namespace Vars: {variablesCount}
         </span>
+
+        <span className="hidden xl:inline text-neutral-400 dark:text-neutral-500">
+          © 2026 salim-slimani
+        </span>
       </div>
 
       {/* Right side telemetry */}

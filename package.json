@@ -1,7 +1,16 @@
 {
-  "name": "react-example",
+  "name": "pystudio",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "PyStudio - Python & Data Science Learning Platform. Copyright (c) 2026 salim-slimani.",
+  "author": "salim-slimani",
+  "license": "MIT",
+  "homepage": "https://github.com/salim-studio/pystudio",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/salim-studio/pystudio.git"
+  },
+  "keywords": ["python", "data-science", "notebook", "learning-platform", "pystudio"],
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

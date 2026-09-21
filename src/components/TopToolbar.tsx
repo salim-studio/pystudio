@@ -74,9 +74,13 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
       {/* Left branding & Active notebook title */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold shadow-sm">
-            <span className="text-base font-mono">Py</span>
-          </div>
+          <img
+            src="/logo.svg"
+            alt="PyStudio logo"
+            className="w-8 h-8 rounded-lg shadow-sm"
+            width={32}
+            height={32}
+          />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-neutral-900 dark:text-neutral-100 text-sm tracking-tight">
